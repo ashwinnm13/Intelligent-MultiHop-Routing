@@ -1,0 +1,40 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Notebook
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/
+
+# Temporary
+tmp/
+temp/
