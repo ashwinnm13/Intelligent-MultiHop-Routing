@@ -5,9 +5,9 @@ from rl_engine.q_learning import QLearningAgent
 EPISODES = 100
 
 
-def train():
+def train(topology=None):
 
-    env = NetworkEnv()
+    env = NetworkEnv(topology)
 
     agent = QLearningAgent()
 

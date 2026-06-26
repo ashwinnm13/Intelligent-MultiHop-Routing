@@ -4,7 +4,9 @@ from rl_engine.topology import (
     loss_matrix,
 )
 
-from rl_engine.rewards import calculate_reward
+from rl_engine.rewards import (
+    calculate_reward
+)
 
 
 DESTINATION = 5
@@ -12,26 +14,47 @@ DESTINATION = 5
 
 class NetworkEnv:
 
-    def __init__(self):
+    def __init__(
+        self,
+        topology=None
+    ):
+
         self.current_node = 0
+
+        self.adjacency = (
+            topology
+            if topology is not None
+            else adjacency_matrix
+        )
 
     def reset(self):
+
         self.current_node = 0
+
         return self.current_node
 
-    def get_valid_actions(self, state):
+    def get_valid_actions(
+        self,
+        state
+    ):
 
         actions = []
 
         for node, connected in enumerate(
-            adjacency_matrix[state]
+            self.adjacency[state]
         ):
+
             if connected == 1:
-                actions.append(node)
+                actions.append(
+                    node
+                )
 
         return actions
 
-    def step(self, action):
+    def step(
+        self,
+        action
+    ):
 
         if action not in self.get_valid_actions(
             self.current_node
