@@ -31,9 +31,7 @@ class NetworkEnv:
 
     def step(self, action):
 
-        if action not in self.get_valid_actions(
-            self.current_node
-        ):
+        if action not in self.get_valid_actions( self.current_node):
             raise ValueError("Invalid move")
 
         latency = latency_matrix[self.current_node][action]
