@@ -9,7 +9,7 @@ def get_best_route(agent):
 
     while state != 5:
 
-        action = (
+        action = int(
             agent.q_table[state]
             .argmax()
         )
