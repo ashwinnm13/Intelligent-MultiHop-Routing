@@ -3,7 +3,7 @@ from rl_engine.q_learning import (
 )
 
 
-def test_q_update():
+def test_update():
 
     agent = QLearningAgent()
 

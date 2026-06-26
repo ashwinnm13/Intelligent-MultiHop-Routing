@@ -5,25 +5,40 @@ from rl_engine.topology import NUM_NODES
 
 class QLearningAgent:
 
-    def __init__(self,learning_rate=0.1,discount_factor=0.9,epsilon=0.2):
+    def __init__(
+        self,
+        learning_rate=0.1,
+        discount_factor=0.9,
+        epsilon=0.2
+    ):
 
         self.alpha = learning_rate
         self.gamma = discount_factor
         self.epsilon = epsilon
 
-        # Q[state][action]
-        self.q_table = np.zeros((NUM_NODES, NUM_NODES))
+        self.q_table = np.zeros(
+            (NUM_NODES, NUM_NODES)
+        )
 
-    def choose_action(self,state,valid_actions):
+    def choose_action(
+        self,
+        state,
+        valid_actions
+    ):
 
-        # Exploration
-        if np.random.rand() < self.epsilon:
-            return np.random.choice(valid_actions)
+        if np.random.random() < self.epsilon:
+            return np.random.choice(
+                valid_actions
+            )
 
-        # Exploitation
-        scores = [self.q_table[state][a] for a in valid_actions]
+        scores = [
+            self.q_table[state][a]
+            for a in valid_actions
+        ]
 
-        return valid_actions[np.argmax(scores)]
+        best = np.argmax(scores)
+
+        return valid_actions[best]
 
     def update(
         self,
@@ -33,16 +48,31 @@ class QLearningAgent:
         next_state
     ):
 
-        old_value = (
-            self.q_table[state][action]
+        current = self.q_table[
+            state
+        ][action]
+
+        future = np.max(
+            self.q_table[
+                next_state
+            ]
         )
 
-        next_best = np.max(
-            self.q_table[next_state]
+        updated = (
+            current
+            +
+            self.alpha
+            *
+            (
+                reward
+                +
+                self.gamma
+                * future
+                -
+                current
+            )
         )
-
-        new_value = (old_value + self.alpha*(reward + self.gamma*next_best -old_value))
 
         self.q_table[
             state
-        ][action] = new_value
+        ][action] = updated

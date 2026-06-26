@@ -4,17 +4,18 @@ from rl_engine.topology import (
     loss_matrix,
 )
 
+from rl_engine.rewards import calculate_reward
+
+
 DESTINATION = 5
 
 
 class NetworkEnv:
 
     def __init__(self):
-
         self.current_node = 0
 
     def reset(self):
-
         self.current_node = 0
         return self.current_node
 
@@ -22,8 +23,9 @@ class NetworkEnv:
 
         actions = []
 
-        for node, connected in enumerate(adjacency_matrix[state] ):
-
+        for node, connected in enumerate(
+            adjacency_matrix[state]
+        ):
             if connected == 1:
                 actions.append(node)
 
@@ -31,21 +33,33 @@ class NetworkEnv:
 
     def step(self, action):
 
-        if action not in self.get_valid_actions( self.current_node):
-            raise ValueError("Invalid move")
+        if action not in self.get_valid_actions(
+            self.current_node
+        ):
+            raise ValueError(
+                "Invalid move"
+            )
 
-        latency = latency_matrix[self.current_node][action]
+        latency = latency_matrix[
+            self.current_node
+        ][action]
 
-        loss = loss_matrix[self.current_node][action]
-
-        reward = -(latency + loss)
+        loss = loss_matrix[
+            self.current_node
+        ][action]
 
         self.current_node = action
 
-        done = ( self.current_node == DESTINATION)
+        done = (
+            self.current_node
+            == DESTINATION
+        )
 
-        if done:
-            reward += 100
+        reward = calculate_reward(
+            latency,
+            loss,
+            done
+        )
 
         info = {
             "latency": latency,
