@@ -1,11 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from rl_engine.inference import (
-    train,
-    get_best_route,
-)
-
 
 def draw_route(route):
 
@@ -21,11 +16,17 @@ def draw_route(route):
         (4, 5),
     ]
 
-    graph.add_edges_from(edges)
+    graph.add_edges_from(
+        edges
+    )
 
     positions = nx.spring_layout(
         graph,
         seed=42
+    )
+
+    figure = plt.figure(
+        figsize=(4, 3)
     )
 
     route_edges = list(
@@ -38,31 +39,19 @@ def draw_route(route):
     nx.draw(
         graph,
         positions,
-        with_labels=True
+        with_labels=True,
+        node_size=1200,
     )
 
     nx.draw_networkx_edges(
         graph,
         positions,
         edgelist=route_edges,
-        width=4
+        width=3,
     )
 
     plt.title(
         "Learned Route"
     )
 
-    plt.show()
-
-
-if __name__ == "__main__":
-
-    agent = train()
-
-    route = (
-        get_best_route(
-            agent
-        )
-    )
-
-    draw_route(route)
+    return figure

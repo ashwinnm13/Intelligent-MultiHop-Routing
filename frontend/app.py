@@ -9,13 +9,28 @@ sys.path.append(
 
 import streamlit as st
 
-from rl_engine.train import train
+from frontend.visualizer import (
+    draw_route
+)
+
+from rl_engine.train import (
+    train
+)
+
 from rl_engine.inference import (
     get_best_route
 )
 
+from rl_engine.topology import (
+    adjacency_matrix
+)
+
 from backend.metrics import (
     route_metrics
+)
+
+from backend.chaos_router import (
+    break_link
 )
 
 
@@ -25,68 +40,187 @@ st.set_page_config(
 )
 
 st.title(
-    "🚀 RouteFlux"
+    "🚀 Intelligent Multihop Routing"
 )
 
 st.write(
-    "AI Multi-Hop Routing Optimizer"
+    "AI Routing Optimizer"
 )
 
 
 if st.button(
-    "Train & Find Route"
+    "Train & Compare"
 ):
 
     with st.spinner(
         "Training..."
     ):
 
-        agent = train()
+        normal_agent, normal_rewards = train()
 
-        route = (
+        normal_route = (
             get_best_route(
-                agent
+                normal_agent
             )
         )
 
-        metrics = (
+        normal_metrics = (
             route_metrics(
-                route
+                normal_route
+            )
+        )
+
+        failed_topology = (
+            break_link(
+                adjacency_matrix,
+                2,
+                4
+            )
+        )
+
+        failed_agent, failed_rewards = (
+            train(
+                failed_topology
+            )
+        )
+
+        failed_route = (
+            get_best_route(
+                failed_agent
+            )
+        )
+
+        failed_metrics = (
+            route_metrics(
+                failed_route
             )
         )
 
     st.success(
-        "Route Generated"
+        "Comparison Ready"
     )
 
-    st.subheader(
-        "Best Route"
+    st.divider()
+
+    left, right = (
+        st.columns(2)
     )
 
-    st.write(
-        " → ".join(
-            map(
-                str,
-                route
+    with left:
+
+        st.subheader(
+            "Normal Network"
+        )
+
+        fig = draw_route(
+            normal_route
+        )
+
+        st.pyplot(
+            fig,
+            use_container_width=False
+        )
+
+        st.write(
+            " → ".join(
+                map(
+                    str,
+                    normal_route
+                )
             )
         )
+
+        c1, c2, c3 = (
+            st.columns(3)
+        )
+
+        c1.metric(
+            "Latency",
+            f"{normal_metrics['latency']} ms"
+        )
+
+        c2.metric(
+            "Loss",
+            f"{normal_metrics['loss']} %"
+        )
+
+        c3.metric(
+            "Hops",
+            normal_metrics[
+                "hops"
+            ]
+        )
+
+    with right:
+
+        st.subheader(
+            "Broken 2 ↔ 4"
+        )
+
+        fig = draw_route(
+            failed_route
+        )
+
+        st.pyplot(
+            fig,
+            use_container_width=False
+        )
+
+        st.write(
+            " → ".join(
+                map(
+                    str,
+                    failed_route
+                )
+            )
+        )
+
+        c1, c2, c3 = (
+            st.columns(3)
+        )
+
+        c1.metric(
+            "Latency",
+            f"{failed_metrics['latency']} ms"
+        )
+
+        c2.metric(
+            "Loss",
+            f"{failed_metrics['loss']} %"
+        )
+
+        c3.metric(
+            "Hops",
+            failed_metrics[
+                "hops"
+            ]
+        )
+
+
+        st.subheader(
+        "Learning Curve"
     )
 
-    col1, col2, col3 = (
-        st.columns(3)
+    chart_left, chart_right = (
+        st.columns(2)
     )
 
-    col1.metric(
-        "Latency",
-        f"{metrics['latency']} ms"
-    )
+    with chart_left:
 
-    col2.metric(
-        "Packet Loss",
-        f"{metrics['loss']} %"
-    )
+        st.write(
+            "Normal Network Rewards"
+        )
 
-    col3.metric(
-        "Hops",
-        metrics["hops"]
-    )
+        st.line_chart(
+            normal_rewards
+        )
+
+    with chart_right:
+
+        st.write(
+            "Broken Network Rewards"
+        )
+
+        st.line_chart(
+            failed_rewards
+        )

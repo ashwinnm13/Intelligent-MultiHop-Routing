@@ -1,34 +1,38 @@
 from rl_engine.environment import NetworkEnv
-from rl_engine.q_learning import QLearningAgent
+from rl_engine.q_learning import QLearning
 
 
-EPISODES = 100
+def train(
+    topology=None,
+    episodes=300
+):
 
+    env = NetworkEnv(
+        topology
+    )
 
-def train(topology=None):
+    agent = QLearning()
 
-    env = NetworkEnv(topology)
+    rewards = []
 
-    agent = QLearningAgent()
-
-    for episode in range(EPISODES):
+    for _ in range(
+        episodes
+    ):
 
         state = env.reset()
 
         done = False
 
-        while not done:
+        total_reward = 0
 
-            valid_actions = (
-                env.get_valid_actions(
-                    state
-                )
-            )
+        while not done:
 
             action = (
                 agent.choose_action(
                     state,
-                    valid_actions
+                    env.get_valid_actions(
+                        state
+                    )
                 )
             )
 
@@ -36,27 +40,31 @@ def train(topology=None):
                 next_state,
                 reward,
                 done,
-                info,
-            ) = env.step(action)
+                _
+            ) = env.step(
+                action
+            )
 
             agent.update(
                 state,
                 action,
                 reward,
-                next_state,
+                next_state
             )
 
-            state = next_state
+            state = (
+                next_state
+            )
 
-    return agent
+            total_reward += (
+                reward
+            )
 
+        rewards.append(
+            total_reward
+        )
 
-if __name__ == "__main__":
-
-    trained_agent = train()
-
-    print("\nQ Table:\n")
-
-    print(
-        trained_agent.q_table
+    return (
+        agent,
+        rewards
     )
