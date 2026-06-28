@@ -1,13 +1,15 @@
 from rl_engine.topology import (
     adjacency_matrix,
-    latency_matrix,
-    loss_matrix,
+)
+
+from backend.dynamic_network import (
+    generate_latency,
+    generate_loss,
 )
 
 from rl_engine.rewards import (
-    calculate_reward
+    calculate_reward,
 )
-
 
 DESTINATION = 5
 
@@ -25,6 +27,14 @@ class NetworkEnv:
             topology
             if topology is not None
             else adjacency_matrix
+        )
+
+        self.latency = (
+            generate_latency()
+        )
+
+        self.loss = (
+            generate_loss()
         )
 
     def reset(self):
@@ -59,15 +69,16 @@ class NetworkEnv:
         if action not in self.get_valid_actions(
             self.current_node
         ):
+
             raise ValueError(
                 "Invalid move"
             )
 
-        latency = latency_matrix[
+        latency = self.latency[
             self.current_node
         ][action]
 
-        loss = loss_matrix[
+        loss = self.loss[
             self.current_node
         ][action]
 

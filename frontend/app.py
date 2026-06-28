@@ -8,6 +8,12 @@ sys.path.append(
 )
 
 import streamlit as st
+import altair as alt
+import pandas as pd
+
+from streamlit_autorefresh import (
+    st_autorefresh
+)
 
 from frontend.visualizer import (
     draw_route
@@ -40,16 +46,44 @@ st.set_page_config(
 )
 
 st.title(
-    "🚀 Intelligent Multihop Routing"
+    "Intelligent Multihop Routing"
+)
+
+st.caption(
+    "Dynamic network conditions enabled"
 )
 
 st.write(
     "AI Routing Optimizer"
 )
 
+auto_mode = st.toggle(
+    "Live Mode"
+)
 
-if st.button(
+if auto_mode:
+
+    st_autorefresh(
+        interval=5000,
+        key="refresh"
+    )
+
+
+if "normal_rewards" not in st.session_state:
+    st.session_state.normal_rewards = []
+
+if "failed_rewards" not in st.session_state:
+    st.session_state.failed_rewards = []
+
+
+run = st.button(
     "Train & Compare"
+)
+
+if (
+    run
+    or
+    auto_mode
 ):
 
     with st.spinner(
@@ -94,6 +128,14 @@ if st.button(
             route_metrics(
                 failed_route
             )
+        )
+
+        st.session_state.normal_rewards = (
+            normal_rewards
+        )
+
+        st.session_state.failed_rewards = (
+            failed_rewards
         )
 
     st.success(
@@ -197,8 +239,29 @@ if st.button(
         )
 
 
-        st.subheader(
+if (
+    len(
+        st.session_state.normal_rewards
+    )
+    >
+    0
+):
+
+    st.divider()
+
+    st.subheader(
         "Learning Curve"
+    )
+
+    st.info(
+        """
+X-axis → Training Episodes
+
+Y-axis → Total Reward
+
+Higher reward means better routing decisions.
+Stable curves indicate convergence.
+"""
     )
 
     chart_left, chart_right = (
@@ -207,20 +270,80 @@ if st.button(
 
     with chart_left:
 
-        st.write(
-            "Normal Network Rewards"
+        normal_df = pd.DataFrame({
+
+            "Episode":
+            range(
+                len(
+                    st.session_state.normal_rewards
+                )
+            ),
+
+            "Reward":
+            st.session_state.normal_rewards
+
+        })
+
+        chart = (
+            alt.Chart(
+                normal_df
+            )
+            .mark_line()
+            .encode(
+
+                x=alt.X(
+                    "Episode",
+                    title="Training Episodes"
+                ),
+
+                y=alt.Y(
+                    "Reward",
+                    title="Total Reward"
+                )
+            )
         )
 
-        st.line_chart(
-            normal_rewards
+        st.altair_chart(
+            chart,
+            use_container_width=True
         )
 
     with chart_right:
 
-        st.write(
-            "Broken Network Rewards"
+        failed_df = pd.DataFrame({
+
+            "Episode":
+            range(
+                len(
+                    st.session_state.failed_rewards
+                )
+            ),
+
+            "Reward":
+            st.session_state.failed_rewards
+
+        })
+
+        chart = (
+            alt.Chart(
+                failed_df
+            )
+            .mark_line()
+            .encode(
+
+                x=alt.X(
+                    "Episode",
+                    title="Training Episodes"
+                ),
+
+                y=alt.Y(
+                    "Reward",
+                    title="Total Reward"
+                )
+            )
         )
 
-        st.line_chart(
-            failed_rewards
+        st.altair_chart(
+            chart,
+            use_container_width=True
         )
