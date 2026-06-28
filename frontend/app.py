@@ -15,6 +15,10 @@ from streamlit_autorefresh import (
     st_autorefresh
 )
 
+from frontend.live_telemetry import (
+    get_live_metrics
+)
+
 from frontend.visualizer import (
     draw_route
 )
@@ -47,6 +51,10 @@ from backend.explainer import (
     explain_route
 )
 
+from backend.trigger import (
+    should_retrain
+)
+
 
 st.set_page_config(
     page_title="RouteFlux",
@@ -64,6 +72,49 @@ st.caption(
 st.write(
     "AI Routing Optimizer"
 )
+
+telemetry = (
+    get_live_metrics()
+)
+
+auto_retrain = (
+    should_retrain(
+        telemetry
+    )
+)
+
+a, b, c = (
+    st.columns(3)
+)
+
+a.metric(
+    "Live Latency",
+    f"{telemetry['latency']} ms"
+)
+
+b.metric(
+    "Live Loss",
+    f"{telemetry['loss']} %"
+)
+
+c.metric(
+    "Traffic",
+    f"{telemetry['traffic']} %"
+)
+
+if auto_retrain:
+
+    st.warning(
+        "Network Congested — Retraining"
+    )
+
+else:
+
+    st.success(
+        "Network Stable"
+    )
+
+st.divider()
 
 auto_mode = st.toggle(
     "Live Mode"
@@ -104,6 +155,8 @@ if (
     run
     or
     auto_mode
+    or
+    auto_retrain
 ):
 
     with st.spinner(

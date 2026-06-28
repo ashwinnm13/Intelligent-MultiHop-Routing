@@ -1,5 +1,4 @@
-def evaluate_health(
-    latency,
+def evaluate_health(latency,
     loss
 ):
 
