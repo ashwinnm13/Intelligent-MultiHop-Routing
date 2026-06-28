@@ -4,11 +4,13 @@ from rl_engine.q_learning import QLearning
 
 def train(
     topology=None,
-    episodes=300
+    telemetry=None,
+    episodes=40
 ):
 
     env = NetworkEnv(
-        topology
+        topology,
+        telemetry
     )
 
     agent = QLearning()

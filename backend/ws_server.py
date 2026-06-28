@@ -1,6 +1,10 @@
 from fastapi import (
     FastAPI,
-    WebSocket
+    WebSocket,
+    WebSocketDisconnect
+)
+from fastapi.middleware.cors import (
+    CORSMiddleware,
 )
 
 import asyncio
@@ -10,6 +14,28 @@ from backend.telemetry import (
 )
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*"
+    ],
+    allow_methods=[
+        "*"
+    ],
+    allow_headers=[
+        "*"
+    ],
+)
+
+
+@app.get(
+    "/"
+)
+def health():
+    return {
+        "status": "running"
+    }
 
 
 @app.websocket(
@@ -21,16 +47,24 @@ async def telemetry(
 
     await websocket.accept()
 
-    while True:
+    try:
 
-        data = (
-            generate_metrics()
-        )
+        while True:
 
-        await websocket.send_json(
-            data
-        )
+            data = (
+                generate_metrics()
+            )
 
-        await asyncio.sleep(
-            2
-        )
+            await websocket.send_json(
+                data
+            )
+
+            await asyncio.sleep(
+                5
+            )
+
+    except WebSocketDisconnect:
+        pass
+
+    except Exception:
+        pass

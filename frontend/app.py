@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.append(
@@ -8,56 +9,50 @@ sys.path.append(
 )
 
 import streamlit as st
-import altair as alt
-import pandas as pd
-
 from streamlit_autorefresh import (
-    st_autorefresh
-)
-
-from frontend.live_telemetry import (
-    get_live_metrics
-)
-
-from frontend.visualizer import (
-    draw_route
-)
-
-from rl_engine.train import (
-    train
-)
-
-from rl_engine.inference import (
-    get_best_route
-)
-
-from rl_engine.topology import (
-    adjacency_matrix
-)
-
-from backend.metrics import (
-    route_metrics
-)
-
-from backend.chaos_router import (
-    break_link
-)
-
-from backend.network_health import (
-    evaluate_health
+    st_autorefresh,
 )
 
 from backend.explainer import (
-    explain_route
+    explain_route,
 )
-
-from backend.trigger import (
-    should_retrain
+from backend.metrics import (
+    route_metrics,
 )
-
+from backend.network_health import (
+    evaluate_health,
+)
 from backend.report import (
-    generate_report
+    generate_report,
 )
+from backend.trigger import (
+    should_retrain,
+)
+from frontend.live_telemetry import (
+    get_live_metrics,
+)
+from frontend.visualizer import (
+    draw_route,
+)
+from rl_engine.inference import (
+    get_best_route,
+)
+from rl_engine.topology import (
+    adjacency_matrix,
+)
+from rl_engine.train import (
+    train,
+)
+
+
+MAX_HISTORY_POINTS = 30
+
+
+def format_number(value):
+    if isinstance(value, float):
+        return f"{value:.2f}".rstrip("0").rstrip(".")
+
+    return str(value)
 
 
 st.set_page_config(
@@ -70,522 +65,318 @@ st.title(
 )
 
 st.caption(
-    "Dynamic network conditions enabled"
-)
-
-st.write(
-    "AI Routing Optimizer"
+    "Live telemetry-driven adaptive routing"
 )
 
 telemetry = (
     get_live_metrics()
 )
 
-auto_retrain = (
+is_congested = (
     should_retrain(
         telemetry
     )
 )
 
-a, b, c = (
+if "latency_history" not in st.session_state:
+    st.session_state.latency_history = []
+
+if "loss_history" not in st.session_state:
+    st.session_state.loss_history = []
+
+if "selected_route" not in st.session_state:
+    st.session_state.selected_route = None
+
+if "events" not in st.session_state:
+    st.session_state.events = []
+
+if "decision_count" not in st.session_state:
+    st.session_state.decision_count = 0
+
+st.session_state.latency_history.append(
+    telemetry[
+        "latency"
+    ]
+)
+st.session_state.loss_history.append(
+    telemetry[
+        "loss"
+    ]
+)
+
+st.session_state.latency_history = (
+    st.session_state.latency_history[
+        -MAX_HISTORY_POINTS:
+    ]
+)
+st.session_state.loss_history = (
+    st.session_state.loss_history[
+        -MAX_HISTORY_POINTS:
+    ]
+)
+
+
+st.subheader(
+    "Live Telemetry Metrics"
+)
+
+metric_latency, metric_loss, metric_bandwidth = (
     st.columns(3)
 )
 
-a.metric(
-    "Live Latency",
-    f"{telemetry['latency']} ms"
+metric_latency.metric(
+    "Latency",
+    f"{format_number(telemetry['latency'])} ms",
+)
+metric_loss.metric(
+    "Packet Loss",
+    f"{format_number(telemetry['loss'])} %",
+)
+metric_bandwidth.metric(
+    "Bandwidth",
+    f"{format_number(telemetry['bandwidth'])} Mbps",
 )
 
-b.metric(
-    "Live Loss",
-    f"{telemetry['loss']} %"
+st.subheader(
+    "Network Status"
 )
 
-c.metric(
-    "Traffic",
-    f"{telemetry['traffic']} %"
-)
-
-if auto_retrain:
-
+if is_congested:
     st.warning(
-        "Network Congested — Retraining"
+        "Congested"
     )
-
 else:
-
     st.success(
-        "Network Stable"
+        "Stable"
     )
 
 st.divider()
 
-auto_mode = st.toggle(
-    "Live Mode"
+controls_left, controls_right = (
+    st.columns(
+        [
+            1,
+            4,
+        ]
+    )
 )
 
-if auto_mode:
+with controls_left:
+    live_mode = st.toggle(
+        "Live Mode",
+        value=False,
+    )
 
+with controls_right:
+    train_route = st.button(
+        "Train Route",
+        type="primary",
+    )
+
+if live_mode:
     st_autorefresh(
         interval=5000,
-        key="refresh"
+        key="refresh",
     )
 
-
-if "normal_rewards" not in st.session_state:
-    st.session_state.normal_rewards = []
-
-if "failed_rewards" not in st.session_state:
-    st.session_state.failed_rewards = []
-
-if "latency_history" not in st.session_state:
-
-    st.session_state.latency_history = []
-
-if "loss_history" not in st.session_state:
-
-    st.session_state.loss_history = []
-
-if "events" not in st.session_state:
-
-    st.session_state.events = []
-
-
-run = st.button(
-    "Train & Compare"
-)
-
-if (
-    run
-    or
-    auto_mode
-    or
-    auto_retrain
-):
-
+if train_route:
     with st.spinner(
-        "Training..."
+        "Training route from live telemetry..."
     ):
-
-        normal_agent, normal_rewards = train()
-
-        normal_route = (
+        agent, _ = train(
+            telemetry=telemetry
+        )
+        st.session_state.selected_route = (
             get_best_route(
-                normal_agent
+                agent,
+                adjacency_matrix,
             )
         )
 
-        normal_metrics = (
-            route_metrics(
-                normal_route
-            )
+        metrics = route_metrics(
+            st.session_state.selected_route,
+            telemetry,
         )
 
-        from datetime import datetime
+        st.session_state.decision_count += 1
 
         st.session_state.events.append({
-
-            "time":
-            datetime.now().strftime(
+            "id": st.session_state.decision_count,
+            "time": datetime.now().strftime(
                 "%H:%M:%S"
             ),
-
-            "route":
-            " → ".join(
+            "route": " -> ".join(
                 map(
                     str,
-                    normal_route
+                    st.session_state.selected_route,
                 )
             ),
-
-            "reason":
-            explain_route(
-                normal_metrics
-            )
-        })
-
-        st.session_state.latency_history.append(
-            normal_metrics[
+            "reason": explain_route(
+                metrics
+            ),
+            "latency": telemetry[
                 "latency"
-            ]
-        )
-
-        st.session_state.loss_history.append(
-            normal_metrics[
+            ],
+            "loss": telemetry[
                 "loss"
-            ]
-        )
-
-        failed_topology = (
-            break_link(
-                adjacency_matrix,
-                2,
-                4
-            )
-        )
-
-        failed_agent, failed_rewards = (
-            train(
-                failed_topology
-            )
-        )
-
-        failed_route = (
-            get_best_route(
-                failed_agent
-            )
-        )
-
-        failed_metrics = (
-            route_metrics(
-                failed_route
-            )
-        )
-
-        st.session_state.normal_rewards = (
-            normal_rewards
-        )
-
-        st.session_state.failed_rewards = (
-            failed_rewards
-        )
+            ],
+            "reward": metrics[
+                "reward"
+            ],
+        })
 
     st.success(
-        "Comparison Ready"
+        "Route trained from current telemetry"
     )
 
-    st.divider()
+st.divider()
 
-    left, right = (
-        st.columns(2)
-    )
+st.subheader(
+    "Current Selected Route"
+)
 
-    with left:
-
-        st.subheader(
-            "Normal Network"
-        )
-
-        fig = draw_route(
-            normal_route
-        )
-
-        st.pyplot(
-            fig,
-            use_container_width=False
-        )
-
-        st.write(
-            " → ".join(
-                map(
-                    str,
-                    normal_route
-                )
-            )
-        )
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-        c1.metric(
-            "Latency",
-            f"{normal_metrics['latency']} ms"
-        )
-
-        c2.metric(
-            "Loss",
-            f"{normal_metrics['loss']} %"
-        )
-
-        c3.metric(
-            "Hops",
-            normal_metrics[
-                "hops"
-            ]
-        )
-
-        normal_status = (
-            evaluate_health(
-                normal_metrics[
-                    "latency"
-                ],
-                normal_metrics[
-                    "loss"
-                ]
-            )
-        )
-
-        st.success(
-            normal_status
-        )
-
-        report = (
-            generate_report(
-                normal_route,
-                normal_metrics,
-                normal_status
-            )
-        )
-
-        with open(
-            report,
-            "rb"
-        ) as file:
-
-            st.download_button(
-
-                "Download Report",
-
-                file,
-
-                file_name=
-                "RouteFlux_Report.pdf",
-
-                mime=
-                "application/pdf"
-
-            )
-
-    with right:
-
-        st.subheader(
-            "Broken 2 ↔ 4"
-        )
-
-        fig = draw_route(
-            failed_route
-        )
-
-        st.pyplot(
-            fig,
-            use_container_width=False
-        )
-
-        st.write(
-            " → ".join(
-                map(
-                    str,
-                    failed_route
-                )
-            )
-        )
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-        c1.metric(
-            "Latency",
-            f"{failed_metrics['latency']} ms"
-        )
-
-        c2.metric(
-            "Loss",
-            f"{failed_metrics['loss']} %"
-        )
-
-        c3.metric(
-            "Hops",
-            failed_metrics[
-                "hops"
-            ]
-        )
-
-        failed_status = (
-            evaluate_health(
-                failed_metrics[
-                    "latency"
-                ],
-                failed_metrics[
-                    "loss"
-                ]
-            )
-        )
-
-        st.success(
-            failed_status
-        )
-
-
-if (
-    len(
-        st.session_state.normal_rewards
-    )
-    >
-    0
-):
-
-    st.divider()
-
-    st.subheader(
-        "Learning Curve"
-    )
-
+if st.session_state.selected_route is None:
     st.info(
-        """
-X-axis → Training Episodes
-
-Y-axis → Total Reward
-
-Higher reward means better routing decisions.
-Stable curves indicate convergence.
-"""
+        "Press Train Route to generate a route from the current telemetry snapshot."
+    )
+else:
+    route = st.session_state.selected_route
+    metrics = route_metrics(
+        route,
+        telemetry,
+    )
+    status = evaluate_health(
+        metrics[
+            "latency"
+        ],
+        metrics[
+            "loss"
+        ],
+    )
+    reason = explain_route(
+        metrics
     )
 
-    chart_left, chart_right = (
-        st.columns(2)
+    route_fig = draw_route(
+        route
     )
 
-    with chart_left:
-
-        normal_df = pd.DataFrame({
-
-            "Episode":
-            range(
-                len(
-                    st.session_state.normal_rewards
-                )
-            ),
-
-            "Reward":
-            st.session_state.normal_rewards
-
-        })
-
-        chart = (
-            alt.Chart(
-                normal_df
-            )
-            .mark_line()
-            .encode(
-
-                x=alt.X(
-                    "Episode",
-                    title="Training Episodes"
-                ),
-
-                y=alt.Y(
-                    "Reward",
-                    title="Total Reward"
-                )
-            )
-        )
-
-        st.altair_chart(
-            chart,
-            use_container_width=True
-        )
-
-    with chart_right:
-
-        failed_df = pd.DataFrame({
-
-            "Episode":
-            range(
-                len(
-                    st.session_state.failed_rewards
-                )
-            ),
-
-            "Reward":
-            st.session_state.failed_rewards
-
-        })
-
-        chart = (
-            alt.Chart(
-                failed_df
-            )
-            .mark_line()
-            .encode(
-
-                x=alt.X(
-                    "Episode",
-                    title="Training Episodes"
-                ),
-
-                y=alt.Y(
-                    "Reward",
-                    title="Total Reward"
-                )
-            )
-        )
-
-        st.altair_chart(
-            chart,
-            use_container_width=True
-        )
-
-
-if (
-    len(
-        st.session_state.latency_history
+    graph_left, graph_center, graph_right = st.columns(
+        [
+            1,
+            2,
+            1,
+        ]
     )
-    >
-    1
-):
 
-    st.divider()
+    with graph_center:
+        st.pyplot(
+            route_fig,
+            use_container_width=False,
+        )
 
     st.subheader(
-        "Historical Trends"
+        "Route Explanation"
     )
 
-    left, right = (
-        st.columns(2)
+    detail_a, detail_b, detail_c, detail_d = (
+        st.columns(4)
     )
 
-    with left:
-
-        st.write(
-            "Latency Trend"
-        )
-
-        st.line_chart(
-            st.session_state.latency_history
-        )
-
-    with right:
-
-        st.write(
-            "Packet Loss Trend"
-        )
-
-        st.line_chart(
-            st.session_state.loss_history
-        )
-
-
-if (
-    len(
-        st.session_state.events
+    detail_a.metric(
+        "Selected Path",
+        " -> ".join(
+            map(
+                str,
+                route,
+            )
+        ),
     )
-    >
-    0
-):
+    detail_b.metric(
+        "Latency",
+        f"{format_number(metrics['latency'])} ms",
+    )
+    detail_c.metric(
+        "Packet Loss",
+        f"{format_number(metrics['loss'])} %",
+    )
+    detail_d.metric(
+        "Estimated Reward",
+        format_number(
+            metrics[
+                "reward"
+            ]
+        ),
+    )
 
+    st.write(
+        reason
+    )
+    st.success(
+        status
+    )
+
+    report = generate_report(
+        route,
+        metrics,
+        status,
+        telemetry,
+        st.session_state.latency_history,
+        st.session_state.loss_history,
+        route_fig,
+    )
+
+    with open(
+        report,
+        "rb",
+    ) as file:
+        st.download_button(
+            "Download Report",
+            file,
+            file_name="RouteFlux_Report.pdf",
+            mime="application/pdf",
+        )
+
+st.divider()
+
+st.subheader(
+    "Latency Trend"
+)
+st.line_chart(
+    st.session_state.latency_history,
+    color="#FF4B4B",
+)
+
+st.subheader(
+    "Packet Loss Trend"
+)
+st.line_chart(
+    st.session_state.loss_history,
+    color="#0068C9",
+)
+
+if st.session_state.events:
     st.divider()
-
     st.subheader(
         "Route Decision Timeline"
     )
+    st.caption(
+        "A new decision is recorded each time Train Route is pressed."
+    )
 
     for event in reversed(
-
         st.session_state.events[-10:]
-
     ):
-
         st.markdown(
-
             f"""
-**{event['time']}**
+**Decision #{event['id']} · {event['time']}**
 
-Route:
-{event['route']}
+Route: {event['route']}
 
-Reason:
-{event['reason']}
+Telemetry: {format_number(event['latency'])} ms, {format_number(event['loss'])} % loss
+
+Estimated Reward: {format_number(event['reward'])}
+
+Reason: {event['reason']}
 """
         )

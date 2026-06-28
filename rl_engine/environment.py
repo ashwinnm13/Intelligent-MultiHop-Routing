@@ -2,14 +2,10 @@ from rl_engine.topology import (
     adjacency_matrix,
 )
 
-from backend.dynamic_network import (
-    generate_latency,
-    generate_loss,
+from backend.metrics import (
+    telemetry_cost_matrices,
 )
 
-from rl_engine.rewards import (
-    calculate_reward,
-)
 
 DESTINATION = 5
 
@@ -18,7 +14,8 @@ class NetworkEnv:
 
     def __init__(
         self,
-        topology=None
+        topology=None,
+        telemetry=None,
     ):
 
         self.current_node = 0
@@ -29,12 +26,10 @@ class NetworkEnv:
             else adjacency_matrix
         )
 
-        self.latency = (
-            generate_latency()
-        )
-
-        self.loss = (
-            generate_loss()
+        self.latency, self.loss = (
+            telemetry_cost_matrices(
+                telemetry
+            )
         )
 
     def reset(self):
@@ -74,13 +69,21 @@ class NetworkEnv:
                 "Invalid move"
             )
 
-        latency = self.latency[
-            self.current_node
-        ][action]
+        latency = int(
+            self.latency[
+                self.current_node
+            ][
+                action
+            ]
+        )
 
-        loss = self.loss[
-            self.current_node
-        ][action]
+        loss = int(
+            self.loss[
+                self.current_node
+            ][
+                action
+            ]
+        )
 
         self.current_node = action
 
@@ -89,10 +92,24 @@ class NetworkEnv:
             == DESTINATION
         )
 
-        reward = calculate_reward(
-            latency,
-            loss,
-            done
+        reward = (
+
+            100
+
+            -
+
+            latency
+
+            -
+
+            (
+
+                loss
+                *
+                2
+
+            )
+
         )
 
         info = {
