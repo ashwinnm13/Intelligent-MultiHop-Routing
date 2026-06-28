@@ -453,15 +453,6 @@ Example message:
 
 ---
 
-## 💼 Resume Impact
-
-- Built an AI-powered multihop routing optimizer using Q-learning to adapt route selection based on live latency, packet loss, and bandwidth telemetry.
-- Developed a full-stack observability dashboard with Streamlit, FastAPI, WebSockets, topology visualization, route explanations, and downloadable PDF reports.
-- Designed a reinforcement learning environment for network routing with telemetry-aware rewards, route inference, and automated decision tracking.
-- Deployed a production-style ML systems project across Streamlit Community Cloud and Render with tests, modular architecture, and recruiter-friendly documentation.
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome. To propose a change:
