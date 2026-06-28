@@ -39,6 +39,14 @@ from backend.chaos_router import (
     break_link
 )
 
+from backend.network_health import (
+    evaluate_health
+)
+
+from backend.explainer import (
+    explain_route
+)
+
 
 st.set_page_config(
     page_title="RouteFlux",
@@ -75,6 +83,18 @@ if "normal_rewards" not in st.session_state:
 if "failed_rewards" not in st.session_state:
     st.session_state.failed_rewards = []
 
+if "latency_history" not in st.session_state:
+
+    st.session_state.latency_history = []
+
+if "loss_history" not in st.session_state:
+
+    st.session_state.loss_history = []
+
+if "events" not in st.session_state:
+
+    st.session_state.events = []
+
 
 run = st.button(
     "Train & Compare"
@@ -102,6 +122,41 @@ if (
             route_metrics(
                 normal_route
             )
+        )
+
+        from datetime import datetime
+
+        st.session_state.events.append({
+
+            "time":
+            datetime.now().strftime(
+                "%H:%M:%S"
+            ),
+
+            "route":
+            " → ".join(
+                map(
+                    str,
+                    normal_route
+                )
+            ),
+
+            "reason":
+            explain_route(
+                normal_metrics
+            )
+        })
+
+        st.session_state.latency_history.append(
+            normal_metrics[
+                "latency"
+            ]
+        )
+
+        st.session_state.loss_history.append(
+            normal_metrics[
+                "loss"
+            ]
         )
 
         failed_topology = (
@@ -193,6 +248,21 @@ if (
             ]
         )
 
+        normal_status = (
+            evaluate_health(
+                normal_metrics[
+                    "latency"
+                ],
+                normal_metrics[
+                    "loss"
+                ]
+            )
+        )
+
+        st.success(
+            normal_status
+        )
+
     with right:
 
         st.subheader(
@@ -236,6 +306,21 @@ if (
             failed_metrics[
                 "hops"
             ]
+        )
+
+        failed_status = (
+            evaluate_health(
+                failed_metrics[
+                    "latency"
+                ],
+                failed_metrics[
+                    "loss"
+                ]
+            )
+        )
+
+        st.success(
+            failed_status
         )
 
 
@@ -346,4 +431,77 @@ Stable curves indicate convergence.
         st.altair_chart(
             chart,
             use_container_width=True
+        )
+
+
+if (
+    len(
+        st.session_state.latency_history
+    )
+    >
+    1
+):
+
+    st.divider()
+
+    st.subheader(
+        "Historical Trends"
+    )
+
+    left, right = (
+        st.columns(2)
+    )
+
+    with left:
+
+        st.write(
+            "Latency Trend"
+        )
+
+        st.line_chart(
+            st.session_state.latency_history
+        )
+
+    with right:
+
+        st.write(
+            "Packet Loss Trend"
+        )
+
+        st.line_chart(
+            st.session_state.loss_history
+        )
+
+
+if (
+    len(
+        st.session_state.events
+    )
+    >
+    0
+):
+
+    st.divider()
+
+    st.subheader(
+        "Route Decision Timeline"
+    )
+
+    for event in reversed(
+
+        st.session_state.events[-10:]
+
+    ):
+
+        st.markdown(
+
+            f"""
+**{event['time']}**
+
+Route:
+{event['route']}
+
+Reason:
+{event['reason']}
+"""
         )
