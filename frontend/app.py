@@ -55,6 +55,10 @@ from backend.trigger import (
     should_retrain
 )
 
+from backend.report import (
+    generate_report
+)
+
 
 st.set_page_config(
     page_title="RouteFlux",
@@ -315,6 +319,33 @@ if (
         st.success(
             normal_status
         )
+
+        report = (
+            generate_report(
+                normal_route,
+                normal_metrics,
+                normal_status
+            )
+        )
+
+        with open(
+            report,
+            "rb"
+        ) as file:
+
+            st.download_button(
+
+                "Download Report",
+
+                file,
+
+                file_name=
+                "RouteFlux_Report.pdf",
+
+                mime=
+                "application/pdf"
+
+            )
 
     with right:
 
